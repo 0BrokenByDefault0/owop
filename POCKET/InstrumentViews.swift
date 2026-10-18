@@ -11,9 +11,10 @@ struct InstrumentScreen:View {
     var body:some View {
         GeometryReader { geo in
             let compact=geo.size.height<400
-            VStack(spacing:compact ? 7:14) {
+            VStack(spacing:compact ? 4:14) {
                 HStack(spacing:12) {
                     if let onClose {Button(action:onClose) {Image(systemName:"chevron.left").frame(width:44,height:44)}.accessibilityLabel("Back to lesson")}
+                    if onClose==nil && compact {Menu {Button("Learn"){s.stop();s.tab=0};Button("Practice"){s.stop();s.tab=1};Button("Play"){s.stop();s.tab=2}} label:{Image(systemName:"line.3.horizontal").frame(width:44,height:44)}.accessibilityLabel("Navigation")}
                     VStack(alignment:.leading,spacing:3) {
                         Text(free ? "PLAY":"PRACTICE").font(.system(size:10,weight:.bold)).tracking(2).foregroundStyle(Ink.accent)
                         if !compact { Text(free ? "Make something yours.":s.lesson.title).font(.system(.title3,design:.rounded,weight:.semibold)).lineLimit(1).minimumScaleFactor(0.8) }
@@ -21,7 +22,7 @@ struct InstrumentScreen:View {
                     Spacer(minLength:0)
                     Button {s.stop();setup=true} label: {Text("\(s.bpm)").font(.system(size:22,weight:.semibold,design:.rounded))+Text(" BPM").font(.system(size:9,weight:.bold))}.frame(minWidth:70,minHeight:44).accessibilityLabel("Tempo \(s.bpm) beats per minute. Practice setup.")
                     Button {s.stop();s.showSettings=true} label:{Image(systemName:"slider.horizontal.3").frame(width:44,height:44)}.accessibilityLabel("Audio and MIDI settings")
-                }.foregroundStyle(.white).frame(height:compact ? 36:48)
+                }.foregroundStyle(.white).frame(height:compact ? 44:48)
                 if !compact {
                     HStack {
                         if free {Button {s.stop();takes=true} label:{Label("Saved takes · \(s.state.takes.count)",systemImage:"waveform")}}
@@ -37,7 +38,7 @@ struct InstrumentScreen:View {
                         if let timing=s.timing {Text(String(format:"%+.0f ms",timing)).font(.system(size:11,design:.monospaced)).foregroundStyle(Ink.accent)}
                     }
                 }
-                PadSurface(session:s,full:free).frame(maxWidth:.infinity,maxHeight:.infinity).layoutPriority(1)
+                PadSurface(session:s,full:free).frame(maxWidth:.infinity,minHeight:free || s.fullBank ? 197:(s.activePads.count<=4 ? 100:95),maxHeight:.infinity).layoutPriority(1)
                 if !compact {
                     if !s.audioReady {Button("Retry audio") {s.prepareAudio()}.frame(minHeight:44)}
                     else if let result=s.result,!free {Button {review=true} label:{HStack {Image(systemName:result.passed ? "checkmark.circle":"chart.bar.xaxis");Text(result.assessed ? "\(Int(result.coverage*100))% notes · \(Int(result.median)) ms median":"Untimed phrase complete");Spacer();Text("Review");Image(systemName:"arrow.up.right")}.font(.system(size:11,weight:.medium)).padding(12).foregroundStyle(result.passed ? Ink.teal:Ink.accent).background(Ink.panel,in:RoundedRectangle(cornerRadius:12))}}
@@ -45,12 +46,12 @@ struct InstrumentScreen:View {
                 }
                 HStack(spacing:10) {
                     if !free {Button {if s.running {s.stop()} else {s.free=false;s.start(demo:true)}} label:{Image(systemName:"ear").font(.system(size:20)).frame(width:52,height:compact ? 44:52).background(Ink.panel,in:RoundedRectangle(cornerRadius:14))}.accessibilityLabel("Listen to the lesson")}
-                    PrimaryButton(title:s.running ? (s.listening ? "Stop listening":"Stop"):(free ? "Record a take":"Start practice"),icon:s.running ? "stop.fill":(free ? "record.circle":"play.fill")) {
+                    PrimaryButton(title:s.running ? (s.listening ? "Stop listening":"Stop"):(free ? "Record a take":"Start practice"),icon:s.running ? "stop.fill":(free ? "record.circle":"play.fill"),compact:compact) {
                         if s.running {s.stop()} else {s.free=free;s.start()}
                     }
                     Button {s.stop();setup=true} label:{Image(systemName:"metronome").font(.system(size:20)).frame(width:52,height:compact ? 44:52).background(Ink.panel,in:RoundedRectangle(cornerRadius:14))}.accessibilityLabel("Practice setup")
                 }.foregroundStyle(Ink.accent)
-            }.padding(.horizontal,compact ? 14:22).padding(.top,compact ? 2:14).padding(.bottom,compact ? 2:12)
+            }.padding(.horizontal,compact ? 14:22).padding(.top,compact ? 0:14).padding(.bottom,compact ? 0:12)
         }.background(Ink.background)
         .onAppear {s.free=free}
         .sheet(isPresented:$setup) {PracticeSetup(s:s,free:free)}
@@ -115,7 +116,7 @@ struct PracticeSetup:View {
                         Picker("Isolate a part",selection:$s.focusRole) {Text("All sounds").tag(-1);ForEach(Array(Set(s.lesson.notes.map(\.role))).sorted(),id:\.self) {role in Text(DrumPad.all[DrumPad.primary(role)].name).tag(role)}}
                         Picker("Visual guide",selection:$s.guide) {Text("Rhythm + pads").tag(2);Text("Rhythm only").tag(1);Text("No prompts").tag(0)}
                         Toggle("Repeat with a count-in",isOn:$s.repeatPractice)
-                        Text("A stable skill takes three full phrases with at least 90% of notes, few extra strikes, and median timing within \(Int(s.lesson.tolerance)) ms. All-sound phrases of four bars or more count toward completion.").font(.footnote).foregroundStyle(.secondary)
+                        Text("A stable skill takes three full phrases with at least 90% of notes, no more than one extra strike, and median timing within \(Int(s.lesson.tolerance)) ms. All-sound phrases of four bars or more count toward completion.").font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 Section("Instrument") {

@@ -21,6 +21,7 @@ struct Note: Codable, Equatable {
     var beat: Double
     var pad: Int
     var velocity: Float = 0.8
+    var hand: String? = nil
     var role: Int { DrumPad.all[pad].role }
 }
 struct Lesson: Identifiable {
@@ -77,6 +78,10 @@ struct Lesson: Identifiable {
                 default: add(7,bar%4==3 ? [0,0.5,1,1.5,2,2.5]:[0,0.5,1,1.5,2,2.5,3,3.5],0.65);add(0,bar%2==0 ? [0,2.5]:[0,1.5,2]);add(5,bar%4==3 ? [1,3,3.25]:[1,3],0.9);if bar%4==3 {add(14,[3.5]);add(15,[3.75])}
                 }
             }
+            for index in notes.indices {
+                if [4,8,11,16].contains(id) { notes[index].hand=notes[index].pad==2 ? "L":"R" }
+                if id==17 { notes[index].hand=notes[index].pad==5 ? "R":"L" }
+            }
             return Lesson(id:id,title:titles[id],purpose:purpose[id],instruction:instructions[id],count:id==11 ? "1 trip let · 2 trip let · 3 trip let · 4 trip let" : (id==8||id==16||id==17 ? "1 e & a · 2 e & a · 3 e & a · 4 e & a":"1 & · 2 & · 3 & · 4 &"),mistake:mistakes[id],transfer:id<4 ? "Close the guide and play the same pulse on a table. Then return to the pads without changing tempo." : (id<12 ? "Keep the anchor part and invent one new placement for the other sound. Record it in Play." : (id<20 ? "Use this technique in a different groove. Keep four bars steady before adding a variation.":"Record an eight-bar take, export the MIDI to your DAW, and build a musical idea around your own performance.")),bpm:id<4 ? 65:(id==21 ? 110:80),bars:bars,notes:notes.sorted { $0.beat < $1.beat })
         }
     }()
@@ -87,6 +92,8 @@ struct PlayedHit: Codable, Sendable {
     var pad: Int
     var velocity: Float
     var midi: Bool
+    var sourceNote: Int? = nil
+    var assessmentTime: Double? = nil
 }
 struct Take: Codable, Identifiable, Sendable {
     var id=UUID()
@@ -96,6 +103,7 @@ struct Take: Codable, Identifiable, Sendable {
     var kit: Int
     var duration: Double
     var hits: [PlayedHit]
+    var padNotes: [Int]? = nil
 }
 struct ProgressRecord: Codable {
     var attempts=0
@@ -124,5 +132,12 @@ struct PracticeResult {
         if abs(bias)>20 { return bias>0 ? "Your hits tend to arrive late. Slow down and let the click meet your finger.":"Your hits tend to arrive early. Leave more space before the next strike." }
         if median>45 { return "Keep the tempo here and make each repetition more even." }
         return "Keep the groove, remove a visual prompt, and see what you remember."
+    }
+}
+
+struct PracticeCriteria {
+    static func accepts(_ adjustedTime:Double)->Bool { adjustedTime >= -0.12 }
+    static func passes(coverage:Double,extras:Int,median:Double,tolerance:Double)->Bool {
+        coverage>=0.9 && extras<=1 && median<=tolerance
     }
 }

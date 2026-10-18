@@ -82,7 +82,6 @@ void pd_render(PDInstrument *e,float *l,float *r,int frames,double host) {
         int start=std::max(0,static_cast<int>(std::llround((c.time-host)*e->rate)));
         // Events older than a quarter second are stale after an overloaded/interrupted callback.
         if(c.time>=host-0.25) {
-            if(roles[c.pad]==2)for(auto&v:e->voices)if(v.role==3)v.sample=nullptr;
             Voice *v=nullptr;
             for(auto&candidate:e->voices)if(!candidate.sample) { v=&candidate;break; }
             if(!v)v=&e->voices[e->steal++%voiceCount];
@@ -92,6 +91,9 @@ void pd_render(PDInstrument *e,float *l,float *r,int frames,double host) {
         e->pending[i]=e->pending[--e->pendingCount];
     }
     for(int f=0;f<frames;++f) {
+        // Apply a choke at the strike's sample offset, including unordered look-ahead input.
+        for(auto&v:e->voices)if(v.sample&&v.position==0&&v.role==2)
+            for(auto&open:e->voices)if(open.sample&&open.role==3&&open.position>=0)open.sample=nullptr;
         float sum=0;
         for(auto&v:e->voices)if(v.sample) {
             if(v.position<0) { ++v.position;continue; }

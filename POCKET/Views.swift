@@ -11,9 +11,10 @@ enum Ink {
 struct PrimaryButton:View {
     var title:String
     var icon:String="play.fill"
+    var compact=false
     var action:()->Void
     var body:some View {
-        Button(action:action) { Label(title,systemImage:icon).font(.system(.headline,design:.rounded)).frame(maxWidth:.infinity).frame(minHeight:52).foregroundStyle(Ink.background).background(Ink.accent,in:RoundedRectangle(cornerRadius:16)) }.buttonStyle(.plain)
+        Button(action:action) { Group {if compact {Image(systemName:icon).font(.system(size:18,weight:.semibold))} else {Label(title,systemImage:icon).font(.system(.headline,design:.rounded))}}.frame(maxWidth:.infinity).frame(minHeight:compact ? 44:52).foregroundStyle(Ink.background).background(Ink.accent,in:RoundedRectangle(cornerRadius:16)) }.accessibilityLabel(title).buttonStyle(.plain)
     }
 }
 struct RootView:View {
@@ -21,7 +22,7 @@ struct RootView:View {
     var body:some View {
         GeometryReader { geo in
             VStack(spacing:0) {
-                if geo.size.height<420 {
+                if geo.size.height<420 && s.tab==0 {
                     HStack { Text("POCKET").font(.system(size:13,weight:.black,design:.rounded));Spacer();Picker("Destination",selection:$s.tab) { Text("Learn").tag(0);Text("Practice").tag(1);Text("Play").tag(2) }.pickerStyle(.segmented).frame(maxWidth:300) }.padding(.horizontal,18).frame(height:40)
                 }
                 Group {
@@ -44,11 +45,11 @@ struct RootView:View {
         .sheet(isPresented:$s.showSettings) { SettingsView(s:s) }
         .fullScreenCover(isPresented:$s.showLesson) { LessonView(s:s) }
         .sheet(item:$s.share) { item in ActivitySheet(url:item.url) }
-        .alert("POCKET",isPresented:Binding(get:{s.error != nil},set:{if !$0 {s.error=nil}})) { Button("OK") {s.error=nil} } message: {Text(s.error ?? "")}
-        .onChange(of:s.tab) { _,new in s.stop();s.free=new==2 }
+        .alert("POCKET",isPresented:Binding(get:{!s.showLesson && s.error != nil},set:{if !$0 {s.error=nil}})) { Button("OK") {s.error=nil} } message: {Text(s.error ?? "")}
+        .onChange(of:s.tab) { _,new in s.free=new==2 }
     }
     func nav(_ label:String,_ icon:String,_ index:Int)->some View {
-        Button {s.tab=index} label: {
+        Button {s.stop();s.tab=index} label: {
             VStack(spacing:5) { Image(systemName:icon).font(.system(size:20,weight:.medium));Text(label).font(.system(size:11,weight:.semibold)) }.foregroundStyle(s.tab==index ? Ink.accent:Ink.secondary).frame(maxWidth:.infinity,minHeight:48)
         }.accessibilityAddTraits(s.tab==index ? .isSelected:[])
     }

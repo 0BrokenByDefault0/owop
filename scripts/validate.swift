@@ -1,6 +1,9 @@
 import Foundation
 @main struct Validation {
     static func main() throws {
+        precondition(PracticeCriteria.accepts(-0.05) && !PracticeCriteria.accepts(-0.2))
+        precondition(PracticeCriteria.passes(coverage:1,extras:1,median:10,tolerance:70))
+        precondition(!PracticeCriteria.passes(coverage:1,extras:2,median:10,tolerance:70))
         precondition(Lesson.all.count==24)
         precondition(Set(Lesson.all.map(\.title)).count==24)
         precondition(Set(Lesson.all.map{String(describing:$0.notes)}).count==24)
@@ -18,12 +21,23 @@ import Foundation
         precondition(String(data:wave.prefix(4),encoding:.ascii)=="RIFF")
         precondition(String(data:wave[8..<12],encoding:.ascii)=="WAVE")
         precondition(wave.count>100000 && wave.dropFirst(44).contains{$0 != 0})
+        let mapped=Take(title:"Raw map",bpm:80,kit:0,duration:0.5,hits:[PlayedHit(time:-0.05,pad:0,velocity:0.8,midi:true,sourceNote:60,assessmentTime:-0.12),PlayedHit(time:0.05,pad:5,velocity:0.8,midi:true,sourceNote:61,assessmentTime:-0.02)])
+        let mappedMIDI=TakeExporter.midi(mapped)
+        precondition(mappedMIDI.range(of:Data([0x99,60,101])) != nil)
+        precondition(mappedMIDI.range(of:Data([0x99,61,101])) != nil)
+        let mappedWave=try TakeExporter.wav(mapped)
+        precondition(mappedWave.dropFirst(44).prefix(1000).contains{$0 != 0})
         let data=try JSONEncoder().encode(SavedState(progress:[0:ProgressRecord(attempts:1)],takes:[take]))
         let restored=try JSONDecoder().decode(SavedState.self,from:data)
         precondition(restored.takes.count==1 && restored.takes[0].hits.count==3 && restored.progress[0]?.attempts==1)
         try FileManager.default.createDirectory(atPath:"build/validation",withIntermediateDirectories:true)
         try midi.write(to:URL(fileURLWithPath:"build/validation/check.mid"))
         try wave.write(to:URL(fileURLWithPath:"build/validation/check.wav"))
+        try StateStore.save(restored)
+        try StateStore.save(restored)
+        try Data("invalid".utf8).write(to:StateStore.url)
+        let recovered=try StateStore.load()
+        precondition(recovered.takes.count==1 && StateStore.recoveryNotice != nil)
         print("PASS: 24 distinct lessons, valid events, eight-bar performance, native MIDI/WAV render, unquantized take persistence")
     }
 }

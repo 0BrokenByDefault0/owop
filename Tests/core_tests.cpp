@@ -31,14 +31,22 @@ int main() {
         assert(peak(l)>0.001);
     }
     pd_destroy(e);
+    auto *both=pd_create(48000),*open=pd_create(48000),*closed=pd_create(48000);
+    pd_enqueue(both,6,0.8f,30.001,0);pd_enqueue(both,7,0.8f,30.007,0);
+    pd_enqueue(open,6,0.8f,30.001,0);pd_enqueue(closed,7,0.8f,30.007,0);
+    std::vector<float> a(480),ar(480),b(480),br(480),c(480),cr(480);
+    pd_render(both,a.data(),ar.data(),480,30);pd_render(open,b.data(),br.data(),480,30);pd_render(closed,c.data(),cr.data(),480,30);
+    for(int i=0;i<336;i++) assert(std::abs(a[i]-b[i])<0.00001f);
+    for(int i=336;i<480;i++) assert(std::abs(a[i]-c[i])<0.00001f);
+    pd_destroy(both);pd_destroy(open);pd_destroy(closed);
     PDEvent t[]={{1,0,0.8f},{1,2,0.7f},{1.25,0,0.8f},{2,1,0.4f}};
     PDEvent h[]={{1.01,0,0.8f},{1.01,2,0.7f},{1.02,0,0.8f},{1.26,0,0.8f},{2.02,4,0.4f}};
     PDResult s{}; pd_score(t,4,h,5,0.1,&s);
     assert(s.hits==3 && s.extras==2 && s.misses==1);
     assert(std::abs(s.biasMs-10)<0.001 && std::abs(s.medianErrorMs-10)<0.001);
-    PDEvent b[]={{4,0,0.8f},{4.08,0,0.8f}};
+    PDEvent boundary[]={{4,0,0.8f},{4.08,0,0.8f}};
     PDEvent bh[]={{3.99,0,0.8f},{4.081,0,0.8f}};
-    pd_score(b,2,bh,2,0.1,&s);
+    pd_score(boundary,2,bh,2,0.1,&s);
     assert(s.hits==2 && s.extras==0);
     pd_score(nullptr,0,nullptr,0,0.1,&s);
     assert(s.hits==0 && std::isfinite(s.medianErrorMs));

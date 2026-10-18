@@ -10,7 +10,7 @@ struct PadSurface:UIViewRepresentable {
         if view.pads != selected { view.pads=selected;view.setNeedsLayout() }
         view.highlight=session.upcoming
         view.last=session.lastHitTime>AudioEngine.now-0.11 ? session.lastPad:-1
-        view.positional=session.positional;view.leftHand=session.leftHand
+        view.positional=session.positional;view.handLabels=session.upcomingHands
         view.onHit={ pad,velocity,time in session.strike(pad,velocity:velocity,timestamp:time) }
         view.setNeedsDisplay()
     }
@@ -24,7 +24,7 @@ final class PadView:UIView {
     var highlight=Set<Int>()
     var last = -1
     var positional=false
-    var leftHand=false
+    var handLabels=[Int:String]()
     var onHit:((Int,Float,Double)->Void)?
     private var rects=[CGRect]()
     override init(frame:CGRect) {
@@ -75,7 +75,7 @@ final class PadView:UIView {
                 number.draw(at:CGPoint(x:box.maxX-29,y:box.minY+10),withAttributes:[.font:UIFont.monospacedDigitSystemFont(ofSize:10,weight:.medium),.foregroundColor:UIColor(white:0.55,alpha:1)])
             }
             if target && box.height>85 {
-                let hand=(leftHand ? (index%2==0 ? "R":"L"):(index%2==0 ? "L":"R")) as NSString
+                let hand=(handLabels[pad] ?? "") as NSString
                 hand.draw(at:CGPoint(x:box.minX+12,y:box.minY+27),withAttributes:[.font:UIFont.systemFont(ofSize:11,weight:.medium),.foregroundColor:color])
             }
         }
