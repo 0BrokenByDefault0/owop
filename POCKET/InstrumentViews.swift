@@ -171,12 +171,14 @@ struct TakesView:View {
                 ForEach(s.state.takes) {take in
                     VStack(alignment:.leading,spacing:10) {
                         HStack {VStack(alignment:.leading,spacing:4) {Text(take.title).font(.headline);Text("\(take.bpm) BPM · \(take.hits.count) hits · \(Int(take.duration)) sec").font(.caption).foregroundStyle(.secondary)};Spacer();Button {dismiss();s.replay(take)} label:{Image(systemName:"play.fill").frame(width:44,height:44)}.buttonStyle(.borderless).accessibilityLabel("Replay \(take.title)")}
-                        HStack {Text(take.date,style:.date).font(.caption2).foregroundStyle(.secondary);Spacer();Button("MIDI") {dismiss();s.export(take,wave:false)}.buttonStyle(.borderless);Button("WAV") {dismiss();s.export(take,wave:true)}.buttonStyle(.borderless)}
+                        HStack {Text(take.date,style:.date).font(.caption2).foregroundStyle(.secondary);Spacer();Button("MIDI") {s.export(take,wave:false)}.buttonStyle(.borderless).disabled(s.exporting);Button("WAV") {s.export(take,wave:true)}.buttonStyle(.borderless).disabled(s.exporting)}
                     }.padding(.vertical,5)
                 }.onDelete {indices in s.state.takes.remove(atOffsets:indices);s.persist()}
                 Text("Performances keep your original timing. MIDI uses the drum map; WAV renders your chosen original kit. The latest 50 takes are retained.").font(.footnote).foregroundStyle(.secondary)
-            }.navigationTitle("Your takes").toolbar {ToolbarItem(placement:.confirmationAction){Button("Done"){dismiss()}}}
-        }.tint(Ink.accent)
+            }.navigationTitle("Your takes").toolbar {ToolbarItem(placement:.confirmationAction){Button("Done"){dismiss()}.disabled(s.exporting)}}
+            .overlay {if s.exporting {ProgressView("Preparing your take…").padding(24).background(Ink.panel,in:RoundedRectangle(cornerRadius:18))}}
+            .sheet(item:$s.share) {item in ActivitySheet(url:item.url)}
+        }.tint(Ink.accent).interactiveDismissDisabled(s.exporting)
     }
 }
 struct ActivitySheet:UIViewControllerRepresentable {

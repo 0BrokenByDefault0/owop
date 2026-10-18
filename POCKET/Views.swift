@@ -44,7 +44,6 @@ struct RootView:View {
         .tint(Ink.accent)
         .sheet(isPresented:$s.showSettings) { SettingsView(s:s) }
         .fullScreenCover(isPresented:$s.showLesson) { LessonView(s:s) }
-        .sheet(item:$s.share) { item in ActivitySheet(url:item.url) }
         .alert("POCKET",isPresented:Binding(get:{!s.showLesson && s.error != nil},set:{if !$0 {s.error=nil}})) { Button("OK") {s.error=nil} } message: {Text(s.error ?? "")}
         .onChange(of:s.tab) { _,new in s.free=new==2 }
     }
