@@ -34,7 +34,7 @@ jobs:
           c++ -std=c++17 -O2 -pthread POCKET/Core/PocketCore.cpp Tests/core_tests.cpp -o build/core-tests
           build/core-tests
           c++ -std=c++17 -O2 -c POCKET/Core/PocketCore.cpp -o build/PocketCore.o
-          swiftc -import-objc-header POCKET/Pocket-Bridging-Header.h POCKET/Lessons.swift POCKET/Exports.swift scripts/validate.swift build/PocketCore.o -Xlinker -lc++ -o build/validate
+          swiftc -import-objc-header POCKET/Pocket-Bridging-Header.h POCKET/Lessons.swift POCKET/Exports.swift POCKET/MIDIParser.swift scripts/validate.swift build/PocketCore.o -Xlinker -lc++ -o build/validate
           build/validate
       - name: Build native simulator app
         timeout-minutes: 10

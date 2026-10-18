@@ -1,6 +1,12 @@
 import Foundation
 @main struct Validation {
     static func main() throws {
+        var parser=MIDIStreamParser()
+        let first=parser.feed([0x99,36,100,38,90])
+        precondition(first.count==2 && first[1].0==38)
+        let afterSysex=parser.feed([0xf0]+Array(repeating:UInt8(1),count:512)+[0xf7,0x99,42,80])
+        precondition(afterSysex.count==1 && afterSysex[0].0==42)
+        precondition(parser.feed([42,0]).isEmpty)
         precondition(PracticeCriteria.accepts(-0.05) && !PracticeCriteria.accepts(-0.2))
         precondition(PracticeCriteria.passes(coverage:1,extras:1,median:10,tolerance:70))
         precondition(!PracticeCriteria.passes(coverage:1,extras:2,median:10,tolerance:70))

@@ -38,7 +38,11 @@ int main() {
     pd_render(both,a.data(),ar.data(),480,30);pd_render(open,b.data(),br.data(),480,30);pd_render(closed,c.data(),cr.data(),480,30);
     for(int i=0;i<336;i++) assert(std::abs(a[i]-b[i])<0.00001f);
     for(int i=336;i<480;i++) assert(std::abs(a[i]-c[i])<0.00001f);
-    pd_destroy(both);pd_destroy(open);pd_destroy(closed);
+    auto *reverse=pd_create(48000);
+    pd_enqueue(reverse,7,0.8f,30.007,0);pd_enqueue(reverse,6,0.8f,30.001,0);
+    pd_render(reverse,b.data(),br.data(),480,30);
+    for(int i=0;i<480;i++)assert(std::abs(a[i]-b[i])<0.00001f);
+    pd_destroy(reverse);pd_destroy(both);pd_destroy(open);pd_destroy(closed);
     auto *variants=pd_create(48000);
     pd_enqueue(variants,5,0.8f,40,0);pd_render(variants,a.data(),ar.data(),480,40);pd_cancel(variants);
     pd_enqueue(variants,5,0.8f,41,0);pd_render(variants,b.data(),br.data(),480,41);
@@ -53,7 +57,9 @@ int main() {
     PDEvent bh[]={{3.99,0,0.8f},{4.081,0,0.8f}};
     pd_score(boundary,2,bh,2,0.1,&s);
     assert(s.hits==2 && s.extras==0);
+    PDEvent firstTarget[]={{0,0,0.8f}},early[]={{-0.05,0,0.8f}};
+    pd_score(firstTarget,1,early,1,0.12,&s);assert(s.hits==1 && s.extras==0);
     pd_score(nullptr,0,nullptr,0,0.1,&s);
     assert(s.hits==0 && std::isfinite(s.medianErrorMs));
-    std::cout<<"PASS: instrument, scheduling, cancellation, polyphony, 16 sounds, one-to-one scoring, unisons, boundaries, empty input\n";
+    std::cout<<"PASS: instrument, scheduling, cancellation, polyphony, 16 layered sounds, sample-offset hat choke (both enqueue orders), round robin, one-to-one scoring, unisons, boundaries, early hits, empty input\n";
 }
