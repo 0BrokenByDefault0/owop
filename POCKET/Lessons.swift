@@ -21,6 +21,7 @@ struct Note: Codable, Equatable {
     var beat: Double
     var pad: Int
     var velocity: Float = 0.8
+    var timeOffset: Double = 0
     var hand: String? = nil
     var role: Int { DrumPad.all[pad].role }
 }
@@ -79,6 +80,7 @@ struct Lesson: Identifiable {
                 }
             }
             for index in notes.indices {
+                if id==15 && notes[index].role==1 {notes[index].timeOffset=0.035}
                 if [4,8,11,16].contains(id) { notes[index].hand=notes[index].pad==2 ? "L":"R" }
                 if id==17 { notes[index].hand=notes[index].pad==5 ? "R":"L" }
             }

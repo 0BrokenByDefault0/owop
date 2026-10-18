@@ -12,12 +12,13 @@ constexpr int roles[18]={0,0,2,1,1,1,3,2,4,5,6,7,8,9,10,11,12,12};
 struct Command { int pad=0,kit=0; float velocity=0; double time=0; unsigned epoch=0; };
 struct Voice { const std::vector<float>* sample=nullptr; int position=0; float gain=0; int role=0; };
 float noise(uint32_t& seed) { seed^=seed<<13;seed^=seed>>17;seed^=seed<<5;return float(seed)/float(UINT32_MAX)*2-1; }
-std::vector<float> sound(int pad,int kit,double rate) {
+std::vector<float> sound(int pad,int kit,double rate,int variation) {
     int role=roles[pad];
     double duration=(role==8||role==9)?1.1:(role==3?0.5:0.42);
     if(role==12) duration=0.04;
     std::vector<float> data(static_cast<size_t>(duration*rate));
-    uint32_t seed=0x9173abcdU+pad*137+kit*997;
+    uint32_t seed=0x9173abcdU+pad*137+kit*997+variation*313;
+    double tone=0.7+0.15*(variation/2);
     double phase=0,low=0,lastNoise=0;
     for(size_t i=0;i<data.size();++i) {
         double t=double(i)/rate;
@@ -37,6 +38,7 @@ std::vector<float> sound(int pad,int kit,double rate) {
             case 10: case 11: { double f=(role==10?180:112)+80*std::exp(-t*38);phase+=2*pi*f/rate;x=0.8*std::sin(phase)*std::exp(-t*15)+0.08*n*std::exp(-t*90);break; }
             case 12: x=0.7*std::sin(2*pi*(pad==17?1500:1000)*t)*std::exp(-t*180);break;
         }
+        if(role!=12) x=(tone*x+(1-tone)*low*std::exp(-t*28));
         if(kit==1&&role!=12) x=std::tanh(x*1.4)*0.85;
         double attack=std::min(1.0,t*rate/6);
         data[i]=static_cast<float>(x*attack*0.75);
@@ -45,9 +47,10 @@ std::vector<float> sound(int pad,int kit,double rate) {
 }
 }
 struct PDInstrument {
-    explicit PDInstrument(double rate): rate(rate) { for(int k=0;k<2;++k)for(int p=0;p<18;++p)samples[k][p]=sound(p,k,rate); }
+    explicit PDInstrument(double rate): rate(rate) { for(int k=0;k<2;++k)for(int p=0;p<18;++p)for(int v=0;v<6;++v)samples[k][p][v]=sound(p,k,rate,v); }
     double rate;
-    std::array<std::array<std::vector<float>,18>,2> samples;
+    std::array<std::array<std::array<std::vector<float>,6>,18>,2> samples;
+    int roundRobin[2][18]{};
     std::array<Command,queueSize> queue;
     std::atomic<unsigned> read{0},write{0},epoch{1};
     unsigned renderEpoch=1;
@@ -86,7 +89,9 @@ void pd_render(PDInstrument *e,float *l,float *r,int frames,double host) {
             for(auto&candidate:e->voices)if(!candidate.sample) { v=&candidate;break; }
             if(!v)v=&e->voices[e->steal++%voiceCount];
             float accent=c.pad==4?0.35f:1.f;
-            *v={&e->samples[c.kit][c.pad],-start,c.velocity*accent*0.48f,roles[c.pad]};
+            int layer=c.velocity<0.42f ? 0:(c.velocity<0.78f ? 1:2);
+            int variant=layer*2+(e->roundRobin[c.kit][c.pad]++%2);
+            *v={&e->samples[c.kit][c.pad][variant],-start,c.velocity*accent*0.48f,roles[c.pad]};
         }
         e->pending[i]=e->pending[--e->pendingCount];
     }

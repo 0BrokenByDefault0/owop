@@ -167,7 +167,7 @@ final class Session:ObservableObject {
             for b in stride(from:0.0,to:totalBeats,by:baseLength) {
                 for note in lesson.notes where b+note.beat<totalBeats {
                     if focusRole>=0 && note.role != focusRole { continue }
-                    let feel=lessonID==15 && note.role==1 ? 0.035:0
+                    let feel=note.timeOffset
                     targets.append(TimedPad(time:(b+note.beat)*spb+feel,pad:note.pad,velocity:note.velocity,hand:note.hand))
                 }
             }

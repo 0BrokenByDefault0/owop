@@ -41,6 +41,12 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild -project POCKET.xcodeproj -scheme POCKET -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/simulator-build.log
+      - name: Native interaction tests
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; print(next(d["udid"] for ds in json.load(sys.stdin)["devices"].values() for d in ds if "iPhone" in d["name"]))')
+          xcodebuild test -project POCKET.xcodeproj -scheme POCKET -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build/simulator -resultBundlePath build/ui-tests.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/ui-tests.log
       - name: Inspect native screens
         timeout-minutes: 10
         run: |
@@ -54,3 +60,4 @@ jobs:
             build/*.log
             build/screens/
             build/validation/
+            build/ui-tests.xcresult/

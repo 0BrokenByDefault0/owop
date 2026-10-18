@@ -39,6 +39,11 @@ int main() {
     for(int i=0;i<336;i++) assert(std::abs(a[i]-b[i])<0.00001f);
     for(int i=336;i<480;i++) assert(std::abs(a[i]-c[i])<0.00001f);
     pd_destroy(both);pd_destroy(open);pd_destroy(closed);
+    auto *variants=pd_create(48000);
+    pd_enqueue(variants,5,0.8f,40,0);pd_render(variants,a.data(),ar.data(),480,40);pd_cancel(variants);
+    pd_enqueue(variants,5,0.8f,41,0);pd_render(variants,b.data(),br.data(),480,41);
+    double difference=0;for(int i=0;i<480;i++)difference+=std::abs(a[i]-b[i]);
+    assert(difference>0.001);pd_destroy(variants);
     PDEvent t[]={{1,0,0.8f},{1,2,0.7f},{1.25,0,0.8f},{2,1,0.4f}};
     PDEvent h[]={{1.01,0,0.8f},{1.01,2,0.7f},{1.02,0,0.8f},{1.26,0,0.8f},{2.02,4,0.4f}};
     PDResult s{}; pd_score(t,4,h,5,0.1,&s);
