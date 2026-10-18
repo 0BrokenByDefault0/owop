@@ -1,0 +1,56 @@
+name: POCKET unsigned iPhone IPA
+on:
+  push:
+    branches: [codex/pocket-finger-drumming]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate native project
+        timeout-minutes: 2
+        run: python3 scripts/project.py
+      - name: Build unsigned device app
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -project POCKET.xcodeproj -scheme POCKET -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee build/device-build.log
+      - name: Package and verify arm64 IPA
+        timeout-minutes: 2
+        run: python3 scripts/verify_ipa.py
+      - name: Deliver first IPA before extended validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: POCKET-unsigned-IPA
+          path: build/artifacts/
+      - name: Native course, exports, persistence and kernel checks
+        timeout-minutes: 10
+        run: |
+          set -e
+          c++ -std=c++17 -O2 -pthread POCKET/Core/PocketCore.cpp Tests/core_tests.cpp -o build/core-tests
+          build/core-tests
+          c++ -std=c++17 -O2 -c POCKET/Core/PocketCore.cpp -o build/PocketCore.o
+          swiftc -import-objc-header POCKET/Pocket-Bridging-Header.h POCKET/Lessons.swift POCKET/Exports.swift scripts/validate.swift build/PocketCore.o -Xlinker -lc++ -o build/validate
+          build/validate
+      - name: Build native simulator app
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          xcodebuild -project POCKET.xcodeproj -scheme POCKET -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/simulator-build.log
+      - name: Inspect native screens
+        timeout-minutes: 10
+        run: |
+          python3 scripts/screenshots.py
+      - name: Build logs and validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: POCKET-validation
+          path: |
+            build/*.log
+            build/screens/
+            build/validation/
